@@ -8,10 +8,6 @@ on:
 
   workflow_dispatch:
 
-env:
-  SEM_VERSION: ""
-  IMAGE_NAME: ""
-
 jobs:
   build:
     runs-on: self-hosted
