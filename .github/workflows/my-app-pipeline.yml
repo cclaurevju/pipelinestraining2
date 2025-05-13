@@ -61,10 +61,10 @@ jobs:
           docker exec ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/integration -v"
 
   deploy-prod:
+    if: github.ref == 'refs/heads/carlosClaure_p2_base'
     runs-on: self-hosted
     needs: test
     environment: Production
-
     steps:
       - name: Stop and Remove Existing Containers
         run: |
