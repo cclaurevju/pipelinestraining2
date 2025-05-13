@@ -1,55 +1,82 @@
 name: CI
 
 on:
-  # push:
-  #   branches: [ "develop", "main" ]
-  # pull_request:
-  #   branches: [ "develop", "main" ]
+  push:
+    branches: ["carlosClaure_p2_dev", "carlosClaure_p2_base"]
+  pull_request:
+    branches: ["carlosClaure_p2_base"]
 
   workflow_dispatch:
 
-env: 
+env:
   SEM_VERSION: ""
-  IMAGE_NAME:  ""
+  IMAGE_NAME: ""
 
 jobs:
-  ## 🔧 1. 
-  Static-codecheck:
-    runs-on: ubuntu-latest
-
+  build:
+    runs-on: self-hosted
+    environment: ${{ matrix.environment }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-  ## 🔧 2. 
-  Build:
-    runs-on: ubuntu-latest
-    needs: Static-codecheck
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ vars.IMAGE_NAME }}:${{ github.sha }} .
+    strategy:
+      matrix:
+        environment: [Develop, Production]
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-  ## 🚀 3. 
   deploy-dev:
-    runs-on: ubuntu-latest
-    needs: Build
-    environment:
-      name: Develop
-      url: http://localhost:5000
+    runs-on: self-hosted
+    needs: build
+    environment: Develop
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Stop and Remove Existing Containers
+        run: |
+          docker stop ${{ vars.CONTAINER_NAME }} || true
+          docker rm ${{ vars.CONTAINER_NAME }} || true
+          docker stop ${{ vars.REDIS_SERVICE_NAME }} || true
+          docker rm ${{ vars.REDIS_SERVICE_NAME }} || true
 
-  ## 🚀 4. 
-  deploy-prod:
-    runs-on: ubuntu-latest
+      - name: Deploy Redis Container Development
+        run: |
+          docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
+
+      - name: Deploy to Docker Development
+        run: |
+          docker run -d -p ${{ vars.FLASK_PORT }}:5000 --add-host redis:$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${{ vars.REDIS_SERVICE_NAME }}) --name ${{ vars.CONTAINER_NAME }} ${{ vars.IMAGE_NAME }}:${{ github.sha }}
+
+  test:
+    runs-on: self-hosted
     needs: deploy-dev
-    environment:
-      name: Production
-      url: http://localhost:5000
-
+    environment: Develop
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Testing Docker Image
+        run: docker exec ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/unit -v"
+
+      - name: Testing Redis Connection
+        run: |
+          docker exec ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/integration -v"
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/carlosClaure_p2_base'
+    runs-on: self-hosted
+    needs: test
+    environment: Production
+    steps:
+      - name: Stop and Remove Existing Containers
+        run: |
+          docker stop ${{ vars.CONTAINER_NAME }} || true
+          docker rm ${{ vars.CONTAINER_NAME }} || true
+          docker stop ${{ vars.REDIS_SERVICE_NAME }} || true
+          docker rm ${{ vars.REDIS_SERVICE_NAME }} || true
+
+      - name: Deploy Redis Container Production
+        run: |
+          docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
+
+      - name: Deploy to Docker Production
+        run: |
+          docker run -d -p ${{ vars.FLASK_PORT }}:5000 --add-host redis:$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${{ vars.REDIS_SERVICE_NAME }}) --name ${{ vars.CONTAINER_NAME }} ${{ vars.IMAGE_NAME }}:${{ github.sha }}
