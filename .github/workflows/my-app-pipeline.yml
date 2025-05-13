@@ -33,6 +33,13 @@ jobs:
     environment: Develop
 
     steps:
+      - name: Stop and Remove Existing Containers
+        run: |
+          docker stop ${{ vars.CONTAINER_NAME }} || true
+          docker rm ${{ vars.CONTAINER_NAME }} || true
+          docker stop ${{ vars.REDIS_SERVICE_NAME }} || true
+          docker rm ${{ vars.REDIS_SERVICE_NAME }} || true
+
       - name: Deploy Redis Container Development
         run: |
           docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
@@ -59,6 +66,13 @@ jobs:
     environment: Production
 
     steps:
+      - name: Stop and Remove Existing Containers
+        run: |
+          docker stop ${{ vars.CONTAINER_NAME }} || true
+          docker rm ${{ vars.CONTAINER_NAME }} || true
+          docker stop ${{ vars.REDIS_SERVICE_NAME }} || true
+          docker rm ${{ vars.REDIS_SERVICE_NAME }} || true
+
       - name: Deploy Redis Container Production
         run: |
           docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
