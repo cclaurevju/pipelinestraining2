@@ -1,39 +1,45 @@
 name: CI
 
 on:
-  # push:
-  #   branches: [ "develop", "main" ]
-  # pull_request:
-  #   branches: [ "develop", "main" ]
+  push:
+    branches: ["carlosClaure_p2_dev", "carlosClaure_p2_base"]
+  pull_request:
+    branches: ["carlosClaure_p2_base"]
 
   workflow_dispatch:
 
-env: 
+env:
   SEM_VERSION: ""
-  IMAGE_NAME:  ""
+  IMAGE_NAME: ""
 
 jobs:
-  ## 🔧 1. 
-  Static-codecheck:
-    runs-on: ubuntu-latest
-
+  build:
+    runs-on: self-hosted
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-  ## 🔧 2. 
-  Build:
-    runs-on: ubuntu-latest
-    needs: Static-codecheck
+      - name: Set up Python Virtual Environment (Poetry)
+        uses: DarylStark/actions-python-venv-poetry@dev
+        with:
+          python-version: "3.11"
 
+      - name: Checking python version
+        run: |
+          python --version
+          python3 --version
+          pip --version
+          pip3 --version
+
+  static-codecheck:
+    runs-on: self-hosted
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Printing job
+        uses: echo "Static-codecheck job"
 
-  ## 🚀 3. 
   deploy-dev:
-    runs-on: ubuntu-latest
-    needs: Build
+    runs-on: self-hosted
+    needs: build
     environment:
       name: Develop
       url: http://localhost:5000
@@ -42,9 +48,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-  ## 🚀 4. 
   deploy-prod:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: deploy-dev
     environment:
       name: Production
