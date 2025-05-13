@@ -15,48 +15,56 @@ env:
 jobs:
   build:
     runs-on: self-hosted
+    environment: ${{ matrix.environment }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python Virtual Environment
+      - name: Build Docker Image
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Checking python version
-        run: |
-          python --version
-          python3 --version
-          pip --version
-          pip3 --version
-
-  static-codecheck:
-    runs-on: self-hosted
-    steps:
-      - name: Printing job
-        run: echo "Static-codecheck job"
+          docker build -t ${{ vars.IMAGE_NAME }}:${{ github.sha }} .
+    strategy:
+      matrix:
+        environment: [Develop, Production]
 
   deploy-dev:
     runs-on: self-hosted
     needs: build
-    environment:
-      name: Develop
-      url: http://localhost:5000
+    environment: Develop
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Deploy Redis Container Development
+        run: |
+          docker run -d --name redis -p 6379:6379 redis:alpine
+          docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
+
+      - name: Deploy to Docker Development
+        run: |
+          docker run -d -p ${{ vars.FLASK_PORT }}:5000 --add-host redis:$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${{ vars.REDIS_SERVICE_NAME }}) --name $${{ vars.CONTAINER_NAME }} ${{ vars.IMAGE_NAME }}:${{ github.sha }}
+
+  test:
+    runs-on: self-hosted
+    needs: deploy-dev
+    environment: Develop
+    steps:
+      - name: Testing Docker Image
+        run: docker exec -it ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/unit -v"
+
+      - name: Testing Redis Connection
+        run: |
+          docker exec -it ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/integration -v"
 
   deploy-prod:
     runs-on: self-hosted
-    needs: deploy-dev
-    environment:
-      name: Production
-      url: http://localhost:5000
+    needs: test
+    environment: Production
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Deploy Redis Container Production
+        run: |
+          docker run -d --name redis -p 6379:6379 redis:alpine
+          docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
+
+      - name: Deploy to Docker Production
+        run: |
+          docker run -d -p ${{ vars.FLASK_PORT }}:5000 --add-host redis:$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${{ vars.REDIS_SERVICE_NAME }}) --name $${{ vars.CONTAINER_NAME }} ${{ vars.IMAGE_NAME }}:${{ github.sha }}
