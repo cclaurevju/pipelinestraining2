@@ -54,11 +54,11 @@ jobs:
     environment: Develop
     steps:
       - name: Testing Docker Image
-        run: docker exec -it ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/unit -v"
+        run: docker exec ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/unit -v"
 
       - name: Testing Redis Connection
         run: |
-          docker exec -it ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/integration -v"
+          docker exec ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/integration -v"
 
   deploy-prod:
     runs-on: self-hosted
