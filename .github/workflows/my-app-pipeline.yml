@@ -19,10 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python Virtual Environment (Poetry)
-        uses: DarylStark/actions-python-venv-poetry@v1
-        with:
-          python-version: "3.11"
+      - name: Set up Python Virtual Environment
+        run: |
+          python3.11 -m venv venv
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Checking python version
         run: |
