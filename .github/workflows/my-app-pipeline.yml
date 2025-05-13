@@ -35,7 +35,6 @@ jobs:
     steps:
       - name: Deploy Redis Container Development
         run: |
-          docker run -d --name redis -p 6379:6379 redis:alpine
           docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
 
       - name: Deploy to Docker Development
@@ -62,7 +61,6 @@ jobs:
     steps:
       - name: Deploy Redis Container Production
         run: |
-          docker run -d --name redis -p 6379:6379 redis:alpine
           docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
 
       - name: Deploy to Docker Production
