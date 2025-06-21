@@ -19,7 +19,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run unit tests
-        run: python -m pytest test/unit -v
+        run: python3 -m pytest test/unit -v
 
   build:
     runs-on: self-hosted
