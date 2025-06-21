@@ -58,7 +58,7 @@ jobs:
 
   deploy-dev:
     runs-on: self-hosted
-    needs: build
+    needs: push-to-registry
     environment: Develop
 
     steps:
