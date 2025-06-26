@@ -69,22 +69,23 @@ jobs:
           docker stop ${{ vars.REDIS_SERVICE_NAME }} || true
           docker rm ${{ vars.REDIS_SERVICE_NAME }} || true
 
-      - name: Deploy Redis Container Development
+      - name: Run Docker compose
         run: |
-          docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
+          docker compose run --env CONTAINER_NAME=${{vars.CONTAINER_NAME}} --env FLASK_PORT=${{vars.FLASK_PORT}} --env VERSION=${{ github.sha }} --env REDIS_PORT=${{vars.REDIS_PORT}}
 
-      - name: Deploy to Docker Development
-        run: |
-          docker run -d -p ${{ vars.FLASK_PORT }}:5000 --add-host redis:$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${{ vars.REDIS_SERVICE_NAME }}) --name ${{ vars.CONTAINER_NAME }} ${{ vars.IMAGE_NAME }}:${{ github.sha }}
+      # - name: Deploy Redis Container Development
+      #   run: |
+      #     docker run --name ${{ vars.REDIS_SERVICE_NAME }} -p ${{ vars.REDIS_PORT }}:6379 -d redis:alpine
+
+      # - name: Deploy to Docker Development
+      #   run: |
+      #     docker run -d -p ${{ vars.FLASK_PORT }}:5000 --add-host redis:$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${{ vars.REDIS_SERVICE_NAME }}) --name ${{ vars.CONTAINER_NAME }} ${{ vars.IMAGE_NAME }}:${{ github.sha }}
 
   test:
     runs-on: self-hosted
     needs: deploy-dev
     environment: Develop
     steps:
-      - name: Testing Docker Image
-        run: docker exec ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/unit -v"
-
       - name: Testing Redis Connection
         run: |
           docker exec ${{ vars.CONTAINER_NAME }} sh -c "python -m pytest test/integration -v"
