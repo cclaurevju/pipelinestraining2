@@ -71,7 +71,7 @@ jobs:
 
       - name: Run Docker compose
         run: |
-          docker compose run --env CONTAINER_NAME=${{vars.CONTAINER_NAME}} --env FLASK_PORT=${{vars.FLASK_PORT}} --env VERSION=${{ github.sha }} --env REDIS_PORT=${{vars.REDIS_PORT}} .
+          CONTAINER_NAME=${{vars.CONTAINER_NAME}} FLASK_PORT=${{vars.FLASK_PORT}} VERSION=${{ github.sha }} REDIS_PORT=${{vars.REDIS_PORT}} docker compose run .
 
       # - name: Deploy Redis Container Development
       #   run: |
